@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador de Marés e Gravitação Universal</title>
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --panel-bg: #111827;
+      --card-bg: #1f2937;
+      --border: #374151;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-blue: #38bdf8;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-emerald: #34d399;
+      --accent-purple: #c084fc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 16px;
+    }
+
+    header {
+      max-width: 1400px;
+      margin: 0 auto 16px auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      color: var(--accent-blue);
+    }
+
+    header p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .main-grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: radial-gradient(circle at center, #0f172a 0%, #050811 100%);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .status-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      pointer-events: none;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .control-box {
+      background: var(--card-bg);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .control-box label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .control-box input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      border-color: var(--accent-blue);
+      background: #263244;
+    }
+
+    button.active {
+      background: #0284c7;
+      border-color: var(--accent-blue);
+      color: #fff;
+    }
+
+    .math-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .math-card h3 {
+      font-size: 0.95rem;
+      color: var(--accent-amber);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .formula-box {
+      background: #090d16;
+      border-left: 3px solid var(--accent-blue);
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-family: "Cambria Math", "Times New Roman", monospace;
+      font-size: 0.92rem;
+      margin: 8px 0;
+      overflow-x: auto;
+    }
+
+    .values-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin-top: 6px;
+    }
+
+    .values-table th,
+    .values-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .values-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .highlight-val {
+      font-family: monospace;
+      font-weight: bold;
+      color: var(--accent-emerald);
+    }
+
+    .highlight-rose {
+      font-family: monospace;
+      font-weight: bold;
+      color: var(--accent-rose);
+    }
+
+    .step-explanation {
+      font-size: 0.85rem;
+      color: #d1d5db;
+    }
+
+    .step-explanation li {
+      margin-left: 18px;
+      margin-bottom: 4px;
+    }
+
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>🌊 Simulador de Marés e Gravitação Universal</h1>
+      <p>Visualização física e algébrica (Nível Ensino Médio) da deformação oceânica pela gravidade diferencial da Lua</p>
+    </div>
+    <div class="legend-bar">
+      <span class="legend-item"><i class="dot" style="background:#fbbf24"></i> Gravidade Absoluta (a)</span>
+      <span class="legend-item"><i class="dot" style="background:#fb7185"></i> Força de Maré (Δa)</span>
+      <span class="legend-item"><i class="dot" style="background:#34d399"></i> Farol Observador (Rotação 24h)</span>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <!-- Coluna Esquerda: Simulação Gráfica -->
+    <section class="panel">
+      <div class="canvas-container">
+        <canvas id="simCanvas" width="800" height="600"></canvas>
+        <div class="status-badge" id="observerStatus">
+          Carregando estado do observador...
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btnPlayPause" class="active">⏸ Pausar Movimento</button>
+        <button id="btnStepMoon">🌙 +15° Lua</button>
+        <button id="btnMode1">Modo 1: Gravidade Absoluta</button>
+        <button id="btnMode2">Modo 2: Força de Maré (Δa)</button>
+        <button id="btnMode3" class="active">Modo 3: Campo Completo</button>
+      </div>
+
+      <div class="controls-grid">
+        <div class="control-box">
+          <label>
+            <span>Distância Terra-Lua (d)</span>
+            <span id="lblDistance">384.400 km</span>
+          </label>
+          <input type="range" id="sliderDistance" min="280000" max="450000" step="1000" value="384400" />
+        </div>
+
+        <div class="control-box">
+          <label>
+            <span>Exagero Visual da Maré</span>
+            <span id="lblBulge">35x</span>
+          </label>
+          <input type="range" id="sliderBulge" min="10" max="65" step="1" value="35" />
+        </div>
+
+        <div class="control-box">
+          <label>
+            <span>Velocidade de Rotação</span>
+            <span id="lblSpeed">1.0x</span>
+          </label>
+          <input type="range" id="sliderSpeed" min="0" max="3" step="0.2" value="1" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Coluna Direita: Matemática de Ensino Médio -->
+    <section class="panel">
+      <div class="math-card">
+        <h3>1. Lei da Gravitação Universal (Newton)</h3>
+        <p class="step-explanation">
+          A aceleração gravitacional que a Lua (massa <b>M<sub>L</sub> = 7,35 × 10²² kg</b>) provoca em um ponto a uma distância <b>x</b> é dada por:
+        </p>
+        <div class="formula-box">
+          a = (G · M<sub>L</sub>) / x² &nbsp;&nbsp;|&nbsp;&nbsp; R<sub>Terra</sub> = 6.371 km
+        </div>
+        <p class="step-explanation">
+          Como a Terra tem raio <b>R</b>, o lado <b>A</b> está mais perto da Lua (<b>d − R</b>) e o lado <b>B</b> está mais longe (<b>d + R</b>) do que o centro <b>C</b>:
+        </p>
+        <table class="values-table">
+          <thead>
+            <tr>
+              <th>Ponto na Terra</th>
+              <th>Fórmula da Distância</th>
+              <th>Aceleração (m/s²)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Ponto A</b> (Virado p/ Lua)</td>
+              <td>d − R = <span id="valDistA">378.029</span> km</td>
+              <td class="highlight-val" id="valAccA">3,432 × 10⁻⁵</td>
+            </tr>
+            <tr>
+              <td><b>Centro C</b> (Média da Terra)</td>
+              <td>d = <span id="valDistC">384.400</span> km</td>
+              <td class="highlight-val" id="valAccC">3,319 × 10⁻⁵</td>
+            </tr>
+            <tr>
+              <td><b>Ponto B</b> (Lado Oposto)</td>
+              <td>d + R = <span id="valDistB">390.771</span> km</td>
+              <td class="highlight-val" id="valAccB">3,212 × 10⁻⁵</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="math-card">
+        <h3>2. Por que existem DUAS marés altas? (Subtração Vetorial)</h3>
+        <p class="step-explanation">
+          A Terra inteira cai em direção à Lua com a aceleração do centro (<b>a<sub>C</sub></b>). A deformação dos oceanos depende da <b>diferença</b> entre a gravidade na superfície e a gravidade no centro:
+        </p>
+        <div class="formula-box">
+          • Lado A: Δa<sub>A</sub> = a<sub>A</sub> − a<sub>C</sub> = <span class="highlight-rose" id="valDiffA">+1,13 × 10⁻⁶ m/s²</span> (Puxa o mar para a Lua)<br/>
+          • Lado B: Δa<sub>B</sub> = a<sub>B</sub> − a<sub>C</sub> = <span class="highlight-rose" id="valDiffB">−1,08 × 10⁻⁶ m/s²</span> (O sinal negativo indica que B "fica para trás", criando o 2º bojo!)
+        </div>
+      </div>
+
+      <div class="math-card">
+        <h3>3. Álgebra de Ensino Médio: Produtos Notáveis e a Lei do 1/d³</h3>
+        <ul class="step-explanation">
+          <li>Fazendo <b>Δa = G·M<sub>L</sub>/(d − R)² − G·M<sub>L</sub>/d²</b> e tirando o MMC:</li>
+          <li>Numerador: <b>d² − (d − R)² = d² − (d² − 2dR + R²) = 2dR − R²</b>.</li>
+          <li>Como o raio da Terra (6.371 km) é muito menor que <b>d</b>, desprezamos <b>R²</b> e aproximamos o denominador para <b>d⁴</b>:</li>
+        </ul>
+        <div class="formula-box">
+          Δa ≈ (G · M<sub>L</sub> · 2 · d · R) / d⁴ &nbsp;⇒&nbsp; <b>Δa ≈ (2 · G · M<sub>L</sub> · R) / d³</b>
+        </div>
+        <p class="step-explanation">
+          <b>Resultado prático:</b> A altura teórica da maré lunar em mar aberto é <b>h = <span class="highlight-val" id="valTideHeight">54,2 cm</span></b>. Se você diminuir a distância da Lua no controle deslizante, verá a maré crescer drasticamente por causa do <b>d³</b>!
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Constantes Físicas Reais
+    const G = 6.67430e-11;
+    const M_MOON = 7.34767309e22;
+    const M_EARTH = 5.972e24;
+    const R_EARTH_KM = 6371;
+    const R_EARTH_M = R_EARTH_KM * 1000;
+
+    // Estado da Simulação
+    let state = {
+      running: true,
+      moonAngle: 0,          // radianos
+      earthRotation: 0.4,    // radianos (Farol observador)
+      distanceKm: 384400,
+      bulgeScale: 35,
+      speed: 1.0,
+      vectorMode: 3,         // 1: Absoluto, 2: Diferencial, 3: Completo
+      draggingMoon: false
+    };
+
+    // Elementos de UI
+    const sliderDistance = document.getElementById('sliderDistance');
+    const sliderBulge = document.getElementById('sliderBulge');
+    const sliderSpeed = document.getElementById('sliderSpeed');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnStepMoon = document.getElementById('btnStepMoon');
+    const btnMode1 = document.getElementById('btnMode1');
+    const btnMode2 = document.getElementById('btnMode2');
+    const btnMode3 = document.getElementById('btnMode3');
+
+    function formatSci(val, expFixed) {
+      const scaled = val * Math.pow(10, -expFixed);
+      return `${scaled.toFixed(3).replace('.', ',')} × 10^${expFixed}`;
+    }
+
+    function updateMathPanel() {
+      const d_km = state.distanceKm;
+      const d_m = d_km * 1000;
+
+      const distA_km = d_km - R_EARTH_KM;
+      const distB_km = d_km + R_EARTH_KM;
+
+      const aC = (G * M_MOON) / Math.pow(d_m, 2);
+      const aA = (G * M_MOON) / Math.pow(distA_km * 1000, 2);
+      const aB = (G * M_MOON) / Math.pow(distB_km * 1000, 2);
+
+      const diffA = aA - aC;
+      const diffB = aB - aC;
+
+      // Altura teórica de equilíbrio: h = (3/2) * (M_L / M_T) * (R / d)^3 * R
+      const tideHeightM = 1.5 * (M_MOON / M_EARTH) * Math.pow(R_EARTH_M / d_m, 3) * R_EARTH_M;
+      const tideHeightCm = tideHeightM * 100;
+
+      document.getElementById('lblDistance').textContent = `${d_km.toLocaleString('pt-BR')} km`;
+      document.getElementById('lblBulge').textContent = `${state.bulgeScale}x`;
+      document.getElementById('lblSpeed').textContent = `${state.speed.toFixed(1)}x`;
+
+      document.getElementById('valDistA').textContent = distA_km.toLocaleString('pt-BR');
+      document.getElementById('valDistC').textContent = d_km.toLocaleString('pt-BR');
+      document.getElementById('valDistB').textContent = distB_km.toLocaleString('pt-BR');
+
+      document.getElementById('valAccA').textContent = formatSci(aA, -5);
+      document.getElementById('valAccC').textContent = formatSci(aC, -5);
+      document.getElementById('valAccB').textContent = formatSci(aB, -5);
+
+      document.getElementById('valDiffA').textContent = `+${formatSci(diffA, -6)} m/s²`;
+      document.getElementById('valDiffB').textContent = `${formatSci(diffB, -6)} m/s²`;
+      document.getElementById('valTideHeight').textContent = `${tideHeightCm.toFixed(1).replace('.', ',')} cm (${tideHeightM.toFixed(2).replace('.', ',')} m)`;
+    }
+
+    function drawArrow(x1, y1, x2, y2, color, width = 2.2, label = '') {
+      const headLen = 9;
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(label, x2 + 6 * Math.cos(angle), y2 + 6 * Math.sin(angle) - 6);
+      }
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width * 0.42;
+      const cy = canvas.height * 0.5;
+      const earthRadius = 82;
+
+      // Escala visual para a órbita da Lua
+      const minOrbitPx = 225;
+      const maxOrbitPx = 335;
+      const normDist = (state.distanceKm - 280000) / (450000 - 280000);
+      const orbitRadiusPx = minOrbitPx + normDist * (maxOrbitPx - minOrbitPx);
+
+      const moonX = cx + orbitRadiusPx * Math.cos(state.moonAngle);
+      const moonY = cy + orbitRadiusPx * Math.sin(state.moonAngle);
+
+      // 1. Trilha da Órbita Lunar
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitRadiusPx, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Fator de intensidade da maré proporcional a (384400 / d)^3
+      const cubicFactor = Math.pow(384400 / state.distanceKm, 3);
+      const bulgeMajor = earthRadius + state.bulgeScale * cubicFactor;
+      const bulgeMinor = earthRadius - (state.bulgeScale * 0.45) * cubicFactor;
+
+      // 2. Desenhar o Bojo Oceânico (Elipse rotacionada na direção da Lua)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(state.moonAngle);
+
+      const oceanGrad = ctx.createRadialGradient(0, 0, earthRadius * 0.7, 0, 0, bulgeMajor);
+      oceanGrad.addColorStop(0, 'rgba(14, 165, 233, 0.45)');
+      oceanGrad.addColorStop(1, 'rgba(56, 189, 248, 0.75)');
+
+      ctx.fillStyle = oceanGrad;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, bulgeMajor, bulgeMinor, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Marcações dos Pontos A, B, P1, P2
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('A (Maré Alta)', bulgeMajor + 8, 4);
+      ctx.fillText('B (Maré Alta)', -bulgeMajor - 92, 4);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('P₁ (Baixa)', -28, -bulgeMinor - 10);
+      ctx.fillText('P₂ (Baixa)', -28, bulgeMinor + 20);
+      ctx.restore();
+
+      // 3. Desenhar o Planeta Terra (Visão Polar Norte)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(state.earthRotation);
+
+      ctx.fillStyle = '#1e3a8a';
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, earthRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Continentes estilizados para percepção visual do giro
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath();
+      ctx.arc(28, -18, 22, 0, Math.PI * 1.4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(-30, 24, 25, 0.3, Math.PI * 1.6);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(10, 38, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Polo Norte Central
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Farol Observador na borda da Terra
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      ctx.arc(earthRadius, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Status de Maré do Farol Observador
+      const relAngle = state.earthRotation - state.moonAngle;
+      const tideLevel = Math.cos(2 * relAngle); // +1 em A e B, -1 em P1 e P2
+      let tideStateText = '';
+      if (tideLevel > 0.65) {
+        tideStateText = '🌊 MARÉ ALTA no Farol Observador';
+      } else if (tideLevel < -0.65) {
+        tideStateText = '🏖️ MARÉ BAIXA no Farol Observador';
+      } else {
+        tideStateText = '🔄 Maré em transição (Enchente / Vazante)';
+      }
+      document.getElementById('observerStatus').innerHTML =
+        `<b>Farol Observador (Verde):</b> ${tideStateText}`;
+
+      // 4. Desenhar Vetores conforme o Modo Selecionado
+      const ux = Math.cos(state.moonAngle);
+      const uy = Math.sin(state.moonAngle);
+
+      const ax = cx + earthRadius * ux;
+      const ay = cy + earthRadius * uy;
+      const bx = cx - earthRadius * ux;
+      const by = cy - earthRadius * uy;
+
+      if (state.vectorMode === 1 || state.vectorMode === 3) {
+        // Gravidade Absoluta (Todas apontam para a Lua, mas A > C > B)
+        const baseLen = 58 * cubicFactor;
+        drawArrow(ax, ay, ax + (baseLen + 22) * ux, ay + (baseLen + 22) * uy, '#fbbf24', 3, 'a_A');
+        drawArrow(cx, cy, cx + baseLen * ux, cy + baseLen * uy, '#fbbf24', 3, 'a_C');
+        drawArrow(bx, by, bx + (baseLen - 20) * ux, by + (baseLen - 20) * uy, '#fbbf24', 3, 'a_B');
+      }
+
+      if (state.vectorMode === 2 || state.vectorMode === 3) {
+        // Campo de Força Diferencial (Força de Maré) ao redor dos 360 graus
+        const numVectors = state.vectorMode === 3 ? 16 : 4;
+        const diffScale = 34 * cubicFactor;
+
+        for (let i = 0; i < numVectors; i++) {
+          const theta = (i * 2 * Math.PI) / numVectors;
+          const worldAngle = state.moonAngle + theta;
+
+          const px = cx + earthRadius * Math.cos(worldAngle);
+          const py = cy + earthRadius * Math.sin(worldAngle);
+
+          // Componente diferencial clássica: (2 cos(theta) na direção lunar, -sin(theta) perpendicular)
+          const dParallel = 2 * Math.cos(theta);
+          const dPerp = -Math.sin(theta);
+
+          const vx = (dParallel * ux - dPerp * uy) * (diffScale * 0.55);
+          const vy = (dParallel * uy + dPerp * ux) * (diffScale * 0.55);
+
+          const lbl = i === 0 ? 'Δa_A' : (i === numVectors / 2 ? 'Δa_B' : '');
+          drawArrow(px, py, px + vx, py + vy, '#fb7185', 2.4, lbl);
+        }
+      }
+
+      // 5. Desenhar a Lua
+      ctx.save();
+      const moonGrad = ctx.createRadialGradient(moonX - 6, moonY - 6, 4, moonX, moonY, 24);
+      moonGrad.addColorStop(0, '#f8fafc');
+      moonGrad.addColorStop(1, '#64748b');
+      ctx.fillStyle = moonGrad;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('Lua (Arraste-me)', moonX - 48, moonY - 30);
+      ctx.restore();
+    }
+
+    function animate() {
+      if (state.running && !state.draggingMoon) {
+        // A Terra gira ~27x mais rápido que a Lua orbita
+        state.earthRotation += 0.012 * state.speed;
+        state.moonAngle += 0.0008 * state.speed;
+      }
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    // Eventos de Controles
+    sliderDistance.addEventListener('input', (e) => {
+      state.distanceKm = Number(e.target.value);
+      updateMathPanel();
+    });
+
+    sliderBulge.addEventListener('input', (e) => {
+      state.bulgeScale = Number(e.target.value);
+      updateMathPanel();
+    });
+
+    sliderSpeed.addEventListener('input', (e) => {
+      state.speed = Number(e.target.value);
+      updateMathPanel();
+    });
+
+    btnPlayPause.addEventListener('click', () => {
+      state.running = !state.running;
+      btnPlayPause.textContent = state.running ? '⏸ Pausar Movimento' : '▶ Continuar Movimento';
+      btnPlayPause.classList.toggle('active', state.running);
+    });
+
+    btnStepMoon.addEventListener('click', () => {
+      state.moonAngle += (15 * Math.PI) / 180;
+    });
+
+    function setMode(m) {
+      state.vectorMode = m;
+      btnMode1.classList.toggle('active', m === 1);
+      btnMode2.classList.toggle('active', m === 2);
+      btnMode3.classList.toggle('active', m === 3);
+    }
+
+    btnMode1.addEventListener('click', () => setMode(1));
+    btnMode2.addEventListener('click', () => setMode(2));
+    btnMode3.addEventListener('click', () => setMode(3));
+
+    // Arraste da Lua no Canvas (Mouse e Touch)
+    function updateMoonFromPointer(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (clientX - rect.left) * scaleX;
+      const y = (clientY - rect.top) * scaleY;
+      const cx = canvas.width * 0.42;
+      const cy = canvas.height * 0.5;
+      state.moonAngle = Math.atan2(y - cy, x - cx);
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      state.draggingMoon = true;
+      updateMoonFromPointer(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (state.draggingMoon) {
+        updateMoonFromPointer(e.clientX, e.clientY);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      state.draggingMoon = false;
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        state.draggingMoon = true;
+        updateMoonFromPointer(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (state.draggingMoon && e.touches.length > 0) {
+        updateMoonFromPointer(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      state.draggingMoon = false;
+    });
+
+    // Inicializar
+    updateMathPanel();
+    animate();
+  </script>
+</body>
+</html>
